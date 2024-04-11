@@ -577,6 +577,7 @@ k-means works by
 - assigns a cluster class to each observation based on closest distance
 - using all members of a cluster, recalculates cluster mean
 - repeats the entire process until cluster means stabilize
+
 ```{r k-means in action}
 knitr::include_graphics("https://miro.medium.com/max/960/1*KrcZK0xYgTa4qFrVr0fO2w.gif")
 
@@ -602,17 +603,22 @@ k-means does not normalize our data for us like PCA did, so we will need to do t
 
 ```{r}
 # normalizing the data
-weather_norm  
+weather_norm <- weather_n %>% 
+  mutate(across(everything(), ~scale(.x)))
 
 weather_norm
+summary(weather_norm)
 ```
 
 Also, we need to define the number of clusters we want.  
 Any thoughts?  
-Let's try 2.  
+Let's try 6.  
 
 ```{r kmeans model }
-mod_km 
+mod_km <- kmeans(weather_norm, 
+                 centers = 6,
+                 nstart = 10
+                 )
 
 mod_km
 ```
@@ -621,6 +627,11 @@ Since the choice of k can be subjective, we will need to find an objective way t
 
 ```{r choosing k - total error}
 # Total error x k
+fviz_nbclust(weather_norm,
+             method = 'wss', #within sum of square method
+             k.max = 10,
+             FUNcluster = kmeans
+             )
 
 ```
 
@@ -640,13 +651,20 @@ silhouette: k=4
 Let's go with 4 clusters.  
 
 ```{r mod_km4 }
-mod_km4 
+mod_km4 <- kmeans(weather_norm,
+                  centers = 4,
+                  nstart = 10
+                  )
 
 mod_km4
 ```
 
 How many observations per cluster?
 ```{r}
+weather %>% 
+  mutate(cluster = mod_km4$cluster) %>% 
+  group_by(cluster) %>% 
+  tally()
 
 ```
 
@@ -682,7 +700,8 @@ We could actually run ANOVA models for each original variable of the form
 and extract cluster mean and pairwise comparison to understand what variables had significant differences among clusters.  
 
 ```{r kmeans PCA plot}
-
+fviz_cluster(mod_km4,
+             data = weather_norm)
 ```
   
 Notice how, behind the scenes, the fviz_cluster function ran a PCA and is showing us a plot with PCs 1 and 2 on the axis (same result as we obtained on the PCA analysis).   
